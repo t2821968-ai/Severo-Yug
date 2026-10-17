@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Админ-панель</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-gray-900 text-white font-sans p-6">
+    <main class="mx-auto max-w-3xl">
+        <header class="mb-6 flex items-start justify-between gap-4">
+            <div>
+                <p class="text-sm uppercase tracking-widest text-gray-400">Управление игрой</p>
+                <h1 class="text-2xl font-bold text-purple-300">Админ-панель</h1>
+                <p id="admin-identity" class="mt-1 text-sm text-gray-400">Проверка доступа...</p>
+            </div>
+            <a href="/" class="shrink-0 text-sm text-blue-300 underline">← В игру</a>
+        </header>
+
+        <p id="admin-message" class="mb-5 min-h-6 text-sm text-green-300" role="status" aria-live="polite"></p>
+
+        <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <section class="rounded-lg border border-gray-700 bg-gray-800 p-5">
+                <h2 class="mb-4 text-lg font-semibold">Выдать карту</h2>
+                <form id="card-form" class="space-y-3">
+                    <div>
+                        <label for="card-username" class="mb-1 block text-sm">Ник игрока</label>
+                        <input id="card-username" type="text" required class="w-full rounded-lg border border-gray-600 bg-gray-700 p-3">
+                    </div>
+                    <div>
+                        <label for="card-name" class="mb-1 block text-sm">Название карты</label>
+                        <input id="card-name" type="text" maxlength="100" required placeholder="Любая карта" class="w-full rounded-lg border border-gray-600 bg-gray-700 p-3">
+                    </div>
+                    <button type="submit" class="w-full rounded-lg bg-purple-600 p-3 font-bold transition hover:bg-purple-500">Выдать карту</button>
+                </form>
+            </section>
+
+            <section class="rounded-lg border border-gray-700 bg-gray-800 p-5">
+                <h2 class="mb-4 text-lg font-semibold">Выдать монеты</h2>
+                <form id="coins-form" class="space-y-3">
+                    <div>
+                        <label for="coins-username" class="mb-1 block text-sm">Ник игрока</label>
+                        <input id="coins-username" type="text" required class="w-full rounded-lg border border-gray-600 bg-gray-700 p-3">
+                    </div>
+                    <div>
+                        <label for="coin-amount" class="mb-1 block text-sm">Количество монет</label>
+                        <input id="coin-amount" type="number" min="1" step="1" required class="w-full rounded-lg border border-gray-600 bg-gray-700 p-3">
+                    </div>
+                    <button type="submit" class="w-full rounded-lg bg-yellow-600 p-3 font-bold transition hover:bg-yellow-500">Начислить монеты</button>
+                </form>
+            </section>
+
+            <section class="rounded-lg border border-gray-700 bg-gray-800 p-5 md:col-span-2">
+                <h2 class="mb-4 text-lg font-semibold">Выдать рулетки</h2>
+                <form id="roulette-form" class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                    <div>
+                        <label for="roulette-username" class="mb-1 block text-sm">Ник игрока</label>
+                        <input id="roulette-username" type="text" required class="w-full rounded-lg border border-gray-600 bg-gray-700 p-3">
+                    </div>
+                    <div>
+                        <label for="roulette-amount" class="mb-1 block text-sm">Количество прокрутов</label>
+                        <input id="roulette-amount" type="number" min="1" step="1" required class="w-full rounded-lg border border-gray-600 bg-gray-700 p-3">
+                    </div>
+                    <button type="submit" class="rounded-lg bg-blue-600 p-3 font-bold transition hover:bg-blue-500">Выдать прокруты</button>
+                </form>
+            </section>
+
+            <section class="rounded-lg border border-gray-700 bg-gray-800 p-5">
+                <h2 class="mb-4 text-lg font-semibold">Выдать кейсы</h2>
+                <form id="cases-form" class="space-y-3">
+                    <div>
+                        <label for="cases-username" class="mb-1 block text-sm">Ник игрока</label>
+                        <input id="cases-username" type="text" required class="w-full rounded-lg border border-gray-600 bg-gray-700 p-3">
+                    </div>
+                    <div>
+                        <label for="cases-amount" class="mb-1 block text-sm">Количество кейсов</label>
+                        <input id="cases-amount" type="number" min="1" step="1" required class="w-full rounded-lg border border-gray-600 bg-gray-700 p-3">
+                    </div>
+                    <button type="submit" class="w-full rounded-lg bg-emerald-700 p-3 font-bold transition hover:bg-emerald-600">Выдать кейсы</button>
+                </form>
+            </section>
+
+            <section class="rounded-lg border border-gray-700 bg-gray-800 p-5">
+                <h2 class="mb-4 text-lg font-semibold">Выдать Северо-Юг</h2>
+                <form id="gacha-form" class="space-y-3">
+                    <div>
+                        <label for="gacha-username" class="mb-1 block text-sm">Ник игрока</label>
+                        <input id="gacha-username" type="text" required class="w-full rounded-lg border border-gray-600 bg-gray-700 p-3">
+                    </div>
+                    <div>
+                        <label for="gacha-amount" class="mb-1 block text-sm">Количество запусков</label>
+                        <input id="gacha-amount" type="number" min="1" step="1" required class="w-full rounded-lg border border-gray-600 bg-gray-700 p-3">
+                    </div>
+                    <button type="submit" class="w-full rounded-lg bg-cyan-700 p-3 font-bold transition hover:bg-cyan-600">Выдать запуски</button>
+                </form>
+            </section>
+        </div>
+    </main>
+
+    <script>
+        const adminMessage = document.getElementById('admin-message');
+
+        async function sendAdminRequest(endpoint, payload, button) {
+            button.disabled = true;
+            adminMessage.className = 'mb-5 min-h-6 text-sm text-gray-300';
+            adminMessage.textContent = 'Выполняется...';
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                adminMessage.className = `mb-5 min-h-6 text-sm ${response.ok ? 'text-green-300' : 'text-red-300'}`;
+                adminMessage.textContent = data.message || 'Готово.';
+            } catch {
+                adminMessage.className = 'mb-5 min-h-6 text-sm text-red-300';
+                adminMessage.textContent = 'Не удалось связаться с сервером.';
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        async function checkAdminAccess() {
+            const response = await fetch('/api/me');
+            if (response.status === 401) {
+                window.location.href = '/login.html';
+                return;
+            }
+            const user = await response.json();
+            if (user.role !== 'admin') {
+                window.location.href = '/';
+                return;
+            }
+            document.getElementById('admin-identity').textContent = `Вошёл как ${user.username}`;
+        }
+
+        document.getElementById('card-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            await sendAdminRequest('/api/admin/give-card', {
+                username: document.getElementById('card-username').value,
+                cardName: document.getElementById('card-name').value
+            }, form.querySelector('button'));
+        });
+
+        document.getElementById('coins-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            await sendAdminRequest('/api/admin/grant-coins', {
+                username: document.getElementById('coins-username').value,
+                amount: document.getElementById('coin-amount').value
+            }, form.querySelector('button'));
+        });
+
+        document.getElementById('roulette-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            await sendAdminRequest('/api/admin/grant-roulette', {
+                username: document.getElementById('roulette-username').value,
+                spins: document.getElementById('roulette-amount').value
+            }, form.querySelector('button'));
+        });
+
+        document.getElementById('cases-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            await sendAdminRequest('/api/admin/grant-cases', {
+                username: document.getElementById('cases-username').value,
+                cases: document.getElementById('cases-amount').value
+            }, form.querySelector('button'));
+        });
+
+        document.getElementById('gacha-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            await sendAdminRequest('/api/admin/grant-gacha', {
+                username: document.getElementById('gacha-username').value,
+                spins: document.getElementById('gacha-amount').value
+            }, form.querySelector('button'));
+        });
+
+        checkAdminAccess();
+    </script>
+</body>
+</html>

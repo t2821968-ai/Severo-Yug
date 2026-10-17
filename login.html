@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#111827">
+    <title>Вход и регистрация — Severo-Yug</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="min-h-screen bg-gray-900 p-4 text-white flex items-center justify-center">
+    <main class="w-full max-w-sm rounded-xl border border-gray-700 bg-gray-800 p-6 shadow-xl sm:p-8">
+        <h1 class="text-2xl font-bold text-yellow-400">Severo-Yug</h1>
+        <p id="auth-title" class="mt-1 text-gray-300">Вход в игру</p>
+
+        <div class="mt-6 grid grid-cols-2 gap-1 rounded-lg bg-gray-900 p-1" role="tablist" aria-label="Действие с аккаунтом">
+            <button id="login-tab" type="button" role="tab" aria-selected="true" class="rounded-md bg-gray-700 p-2 font-semibold">Войти</button>
+            <button id="register-tab" type="button" role="tab" aria-selected="false" class="rounded-md p-2 font-semibold text-gray-400 hover:text-white">Регистрация</button>
+        </div>
+
+        <form id="auth-form" class="mt-5 space-y-4">
+            <div>
+                <label for="username" class="mb-1 block text-sm">Ник</label>
+                <input id="username" type="text" required maxlength="20" autocomplete="username" placeholder="Твой ник" class="w-full rounded-lg border border-gray-600 bg-gray-700 p-3 focus:border-yellow-400 focus:outline-none">
+                <p id="username-help" class="mt-1 text-xs text-gray-400 hidden">3–20 символов: английские буквы, цифры и _</p>
+            </div>
+            <div>
+                <label for="password" class="mb-1 block text-sm">Пароль</label>
+                <input id="password" type="password" required minlength="8" maxlength="128" autocomplete="current-password" placeholder="Пароль" class="w-full rounded-lg border border-gray-600 bg-gray-700 p-3 focus:border-yellow-400 focus:outline-none">
+                <p id="password-help" class="mt-1 text-xs text-gray-400 hidden">Не менее 8 символов</p>
+            </div>
+            <p id="auth-message" class="min-h-5 text-sm text-red-300" role="status" aria-live="polite"></p>
+            <button id="auth-submit" type="submit" class="w-full rounded-lg bg-yellow-500 p-3 font-bold text-gray-900 transition hover:bg-yellow-400">Войти</button>
+        </form>
+    </main>
+
+    <script>
+        const authForm = document.getElementById('auth-form');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const authMessage = document.getElementById('auth-message');
+        const loginTab = document.getElementById('login-tab');
+        const registerTab = document.getElementById('register-tab');
+        let authMode = 'login';
+
+        function setAuthMode(mode) {
+            authMode = mode;
+            const registering = mode === 'register';
+            document.getElementById('auth-title').textContent = registering ? 'Создание аккаунта' : 'Вход в игру';
+            document.getElementById('auth-submit').textContent = registering ? 'Создать аккаунт' : 'Войти';
+            document.getElementById('username-help').classList.toggle('hidden', !registering);
+            document.getElementById('password-help').classList.toggle('hidden', !registering);
+            usernameInput.pattern = registering ? '[A-Za-z0-9_]{3,20}' : '';
+            passwordInput.autocomplete = registering ? 'new-password' : 'current-password';
+            loginTab.setAttribute('aria-selected', String(!registering));
+            registerTab.setAttribute('aria-selected', String(registering));
+            loginTab.className = registering
+                ? 'rounded-md p-2 font-semibold text-gray-400 hover:text-white'
+                : 'rounded-md bg-gray-700 p-2 font-semibold';
+            registerTab.className = registering
+                ? 'rounded-md bg-gray-700 p-2 font-semibold'
+                : 'rounded-md p-2 font-semibold text-gray-400 hover:text-white';
+            authMessage.textContent = '';
+        }
+
+        loginTab.addEventListener('click', () => setAuthMode('login'));
+        registerTab.addEventListener('click', () => setAuthMode('register'));
+
+        authForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const endpoint = authMode === 'register' ? '/api/register' : '/api/login';
+            const submitButton = document.getElementById('auth-submit');
+            submitButton.disabled = true;
+            authMessage.className = 'min-h-5 text-sm text-red-300';
+            authMessage.textContent = 'Проверяем данные...';
+
+            try {
+                const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: usernameInput.value, password: passwordInput.value })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    authMessage.textContent = data.message || 'Не удалось выполнить запрос.';
+                    return;
+                }
+                window.location.href = '/index.html';
+            } catch {
+                authMessage.textContent = 'Не удалось связаться с сервером.';
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

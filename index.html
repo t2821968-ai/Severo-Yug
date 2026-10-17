@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Severo-Yug — карточная игра с уровнями, рулеткой, кейсами и торговой площадкой.">
+    <meta name="theme-color" content="#17120f">
+    <title>Severo-Yug — карточная игра</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        :root {
+            color-scheme: dark;
+            --autumn-bg: #17120f;
+            --autumn-gold: #e5a04b;
+            --autumn-text: #e8ded1;
+            --autumn-muted: #a99b8b;
+        }
+
+        body {
+            background:
+                radial-gradient(ellipse at 50% -15%, rgba(125, 72, 31, 0.2), transparent 55%),
+                var(--autumn-bg);
+            color: var(--autumn-text);
+        }
+
+        #app-shell {
+            height: calc(100dvh - 2rem);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid rgba(121, 80, 45, 0.38);
+            background: linear-gradient(145deg, rgba(39, 30, 23, 0.97), rgba(25, 20, 16, 0.98));
+        }
+
+        #autumn-leaves {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .home-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        #autumn-leaves span {
+            position: absolute;
+            top: -12vh;
+            left: var(--leaf-left);
+            color: #c27b37;
+            opacity: 0.12;
+            filter: sepia(0.8) saturate(0.75);
+            font-size: var(--leaf-size);
+            animation: leaf-fall var(--leaf-duration) linear var(--leaf-delay) infinite;
+        }
+
+        @keyframes leaf-fall {
+            0% { transform: translate3d(0, -10vh, 0) rotate(0deg); }
+            50% { transform: translate3d(28px, 52vh, 0) rotate(190deg); }
+            100% { transform: translate3d(-18px, 115vh, 0) rotate(360deg); }
+        }
+
+        .home-content {
+            display: flex;
+            min-height: 0;
+            flex: 1;
+            flex-direction: column;
+        }
+
+        .action-scroll {
+            min-height: 0;
+            flex: 1;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            scrollbar-color: #79502d transparent;
+        }
+
+        .action-card {
+            display: flex;
+            min-height: 5.5rem;
+            align-items: center;
+            gap: 0.9rem;
+            border: 1px solid rgba(197, 125, 57, 0.48);
+            border-radius: 1rem;
+            background: linear-gradient(145deg, #30271f, #241e19);
+            padding: 0.9rem 1rem;
+            text-align: left;
+            transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+        }
+
+        .action-card:hover:not(:disabled) {
+            transform: translateY(-1px);
+            border-color: var(--autumn-gold);
+            background: linear-gradient(145deg, #3a2d22, #2b2119);
+        }
+
+        .action-card:disabled {
+            cursor: not-allowed;
+            opacity: 0.56;
+        }
+
+        .action-card-icon {
+            display: grid;
+            width: 2.8rem;
+            height: 2.8rem;
+            flex: 0 0 auto;
+            place-items: center;
+            border-radius: 0.85rem;
+            background: rgba(229, 160, 75, 0.12);
+            font-size: 1.35rem;
+        }
+
+        .action-card-title {
+            display: block;
+            color: #f0bd78;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .action-card-description {
+            display: block;
+            margin-top: 0.2rem;
+            color: var(--autumn-muted);
+            font-size: 0.75rem;
+            font-weight: 400;
+            line-height: 1.3;
+        }
+
+        #casino-wheel,
+        #upgrade-wheel {
+            transition: transform 4s cubic-bezier(0.12, 0.78, 0.18, 1);
+        }
+
+        #casino-modal,
+        #gacha-modal,
+        #upgrade-setup-modal,
+        #upgrade-modal,
+        #cases-modal,
+        #leaderboard-modal {
+            width: min(28rem, calc(100vw - 2rem));
+            max-height: calc(100dvh - 2rem);
+            overflow-y: auto;
+        }
+
+        #card-index-modal {
+            width: min(64rem, calc(100vw - 2rem));
+            max-height: calc(100dvh - 2rem);
+            overflow-y: auto;
+        }
+
+        dialog[id] {
+            border-color: rgba(197, 125, 57, 0.55);
+            background: #211a15;
+            color: var(--autumn-text);
+        }
+
+        dialog[id] h2 {
+            color: #f0bd78;
+        }
+
+        dialog[id] button:not(:disabled) {
+            background-color: #8b521f;
+            color: #fff1dc;
+        }
+
+        dialog[id] button:not(:disabled):hover {
+            background-color: #a86428;
+        }
+
+        dialog[id] button:disabled {
+            background-color: #40372f;
+            color: #a99b8b;
+        }
+
+        dialog[id] input,
+        dialog[id] select {
+            border-color: #79502d;
+            background-color: #30271f;
+            color: var(--autumn-text);
+        }
+
+        #casino-wheel {
+            background: conic-gradient(from -90deg, #16a34a 0deg 180deg, #dc2626 180deg 360deg);
+        }
+
+        #casino-wheel .casino-sector-label {
+            transform: translateX(-50%) rotate(var(--casino-label-counter-rotation, 0deg));
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            #autumn-leaves span {
+                animation: none;
+                display: none;
+            }
+
+            #casino-wheel,
+            #upgrade-wheel {
+                transition-duration: 0.01ms;
+            }
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 0.5rem;
+            }
+
+            #app-shell {
+                height: calc(100dvh - 1rem);
+                padding: 1rem;
+            }
+
+            .action-card {
+                min-height: 5.2rem;
+                gap: 0.55rem;
+                padding: 0.7rem;
+            }
+
+            .action-card-icon {
+                width: 2.25rem;
+                height: 2.25rem;
+                font-size: 1.1rem;
+            }
+
+            .action-card-title {
+                font-size: 0.9rem;
+            }
+
+            .action-card-description {
+                font-size: 0.68rem;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen overflow-hidden font-sans p-4">
+    <div id="app-shell" class="relative z-10 mx-auto w-full max-w-5xl rounded-2xl p-6 shadow-2xl">
+        <div id="autumn-leaves" aria-hidden="true">
+            <span style="--leaf-left: 5%; --leaf-size: 1.1rem; --leaf-duration: 23s; --leaf-delay: -8s">🍂</span>
+            <span style="--leaf-left: 14%; --leaf-size: 0.8rem; --leaf-duration: 29s; --leaf-delay: -19s">🍁</span>
+            <span style="--leaf-left: 25%; --leaf-size: 1rem; --leaf-duration: 26s; --leaf-delay: -13s">🍂</span>
+            <span style="--leaf-left: 38%; --leaf-size: 0.75rem; --leaf-duration: 31s; --leaf-delay: -24s">🍁</span>
+            <span style="--leaf-left: 49%; --leaf-size: 1.15rem; --leaf-duration: 25s; --leaf-delay: -5s">🍂</span>
+            <span style="--leaf-left: 61%; --leaf-size: 0.85rem; --leaf-duration: 30s; --leaf-delay: -17s">🍁</span>
+            <span style="--leaf-left: 73%; --leaf-size: 1rem; --leaf-duration: 27s; --leaf-delay: -11s">🍂</span>
+            <span style="--leaf-left: 86%; --leaf-size: 0.8rem; --leaf-duration: 32s; --leaf-delay: -22s">🍁</span>
+            <span style="--leaf-left: 96%; --leaf-size: 1.05rem; --leaf-duration: 24s; --leaf-delay: -15s">🍂</span>
+        </div>
+        <div class="home-content mx-auto w-full max-w-3xl">
+            <header class="mb-3 shrink-0">
+                <div class="flex items-center justify-between gap-3">
+                    <h1 class="text-xl font-bold tracking-wide text-amber-300 sm:text-2xl">Severo-Yug</h1>
+                    <div class="flex shrink-0 items-center gap-2 rounded-full border border-amber-800/70 bg-stone-950/70 px-3 py-2 text-sm">
+                        <span id="user-level" class="font-bold text-amber-300">Уровень 0</span>
+                        <span class="text-amber-900">|</span>
+                        <span class="font-bold text-amber-100"><span id="user-balance">0</span> 💰</span>
+                    </div>
+                </div>
+                <div class="mt-2 flex items-center justify-between gap-2">
+                    <p class="truncate text-sm text-stone-300">Игрок: <span id="user-nickname" class="font-semibold text-stone-100">Загрузка...</span></p>
+                    <p class="shrink-0 text-sm text-stone-400">Любимая карта: <span id="user-card" class="font-semibold text-amber-200">-</span></p>
+                </div>
+            </header>
+
+            <section class="mb-4 grid shrink-0 grid-cols-[auto_minmax(5rem,1fr)_auto] items-center gap-3 rounded-xl border border-amber-900/60 bg-stone-950/50 px-3 py-3 sm:gap-5 sm:px-5" aria-label="Опыт и прогресс уровня">
+                <div class="min-w-0">
+                    <p class="text-[0.65rem] uppercase tracking-wider text-stone-500 sm:text-xs">Всего опыта</p>
+                    <p id="user-xp-total" class="truncate text-lg font-bold text-stone-100 sm:text-2xl">0 XP</p>
+                </div>
+                <div class="min-w-0 text-center">
+                    <div class="mb-1 flex items-center justify-center gap-2">
+                        <p class="text-[0.65rem] text-stone-400 sm:text-xs">До следующего уровня</p>
+                        <p id="user-xp-percent" class="text-xs font-bold text-orange-300">0%</p>
+                    </div>
+                    <div class="h-2.5 overflow-hidden rounded-full bg-stone-800" role="progressbar" aria-label="Прогресс опыта" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                        <div id="user-xp-progress" class="h-full rounded-full bg-gradient-to-r from-amber-600 to-orange-400 transition-all" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="min-w-0 text-right">
+                    <p class="text-[0.65rem] uppercase tracking-wider text-stone-500 sm:text-xs">Осталось</p>
+                    <p id="user-xp" class="whitespace-nowrap text-lg font-bold text-orange-200 sm:text-2xl">100 XP</p>
+                </div>
+            </section>
+
+            <div class="action-scroll pr-1">
+                <h2 class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Игровые действия</h2>
+                <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
+                    <button type="button" onclick="openCasino()" class="action-card">
+                        <span class="action-card-icon">🎰</span><span><span class="action-card-title">Казино</span><span class="action-card-description">Испытай удачу в ставке</span></span>
+                    </button>
+                    <button id="roulette-button" type="button" onclick="spinRoulette()" class="action-card">
+                        <span class="action-card-icon">🎡</span><span><span id="roulette-button-label" class="action-card-title">Рулетка</span><span class="action-card-description">Крути и получай награды</span></span>
+                    </button>
+                    <button type="button" onclick="openGachaModal()" class="action-card">
+                        <span class="action-card-icon">🎴</span><span><span class="action-card-title">Северо-Юг</span><span class="action-card-description">Открывай карточки</span></span>
+                    </button>
+                    <button type="button" onclick="openUpgradeSetupModal()" class="action-card">
+                        <span class="action-card-icon">⬆️</span><span><span class="action-card-title">Апгрейдер</span><span class="action-card-description">Улучши карту с шансом</span></span>
+                    </button>
+                    <button id="case-open-button" type="button" onclick="openCasesModal()" class="action-card">
+                        <span class="action-card-icon">📦</span><span><span id="case-open-label" class="action-card-title">Кейсы · 0</span><span class="action-card-description">Открой редкую карту</span></span>
+                    </button>
+                    <button type="button" onclick="openLeaderboard('balance')" class="action-card">
+                        <span class="action-card-icon">🏆</span><span><span class="action-card-title">Топ по балансу</span><span class="action-card-description">Богатейшие игроки</span></span>
+                    </button>
+                    <button type="button" onclick="openLeaderboard('level')" class="action-card">
+                        <span class="action-card-icon">⭐</span><span><span class="action-card-title">Топ по уровням</span><span class="action-card-description">Рейтинг по опыту</span></span>
+                    </button>
+                    <button type="button" onclick="openMarket()" class="action-card">
+                        <span class="action-card-icon">🛒</span><span><span class="action-card-title">Базар</span><span class="action-card-description">Выставляй и покупай карты</span></span>
+                    </button>
+                    <button id="card-index-button" type="button" onclick="openCardIndex()" class="action-card">
+                        <span class="action-card-icon">📚</span><span><span class="action-card-title">Индекс карточек</span><span class="action-card-description">Коллекция и редкость</span></span>
+                    </button>
+                    <button type="button" onclick="logout()" class="action-card">
+                        <span class="action-card-icon">↩️</span><span><span class="action-card-title">Выйти из игры</span><span class="action-card-description">Сохранить и завершить</span></span>
+                    </button>
+                </div>
+                <p id="roulette-status" class="mt-3 text-xs text-stone-400" aria-live="polite"></p>
+                <p id="roulette-result" class="mt-1 text-sm text-amber-200" role="status" aria-live="polite"></p>
+                <div id="admin-link" class="hidden py-2">
+                    <a href="/admin/admin.html" class="action-card justify-center text-center"><span class="action-card-icon">🛠️</span><span><span class="action-card-title">Панель администратора</span><span class="action-card-description">Управление игрой</span></span></a>
+                </div>
+            </div>
+        </div>
+
+        <dialog id="gacha-modal" aria-labelledby="gacha-title" class="w-[calc(100%-2rem)] max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-gray-600 bg-gray-800 p-0 text-white shadow-2xl backdrop:bg-black/80">
+            <div class="p-6 sm:p-8">
+                <div class="mb-5 flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-sm uppercase tracking-widest text-gray-400">Выбивай карты</p>
+                        <h2 id="gacha-title" class="text-2xl font-bold text-cyan-300">Северо-Юг</h2>
+                        <p class="mt-1 text-sm text-gray-400">Один бесплатный запуск в день. 100 монет · 10 карт: 1 000 монет.</p>
+                    </div>
+                    <button type="button" onclick="closeGachaModal()" aria-label="Закрыть Северо-Юг" class="h-9 w-9 shrink-0 rounded-lg bg-gray-700 text-xl text-gray-300 hover:bg-gray-600">&times;</button>
+                </div>
+                <p class="mb-5 text-xs leading-5 text-gray-400">Обычные 67% · Редкие 0,15% · Сверхредкие 20% · Эпические 8% · Мифические 3% · Легендарные 1% · Секретки 0,5% · Учителя 0,30% · Валерия 0,05%</p>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <button id="gacha-one" type="button" disabled onclick="openGacha(1)" class="rounded-lg bg-cyan-700 p-3 font-bold transition hover:bg-cyan-600 disabled:cursor-not-allowed disabled:bg-gray-600">Выбить 1 карту · 100 монет</button>
+                    <button id="gacha-ten" type="button" disabled onclick="openGacha(10)" class="rounded-lg bg-cyan-700 p-3 font-bold transition hover:bg-cyan-600 disabled:cursor-not-allowed disabled:bg-gray-600">Выбить 10 карт · 1 000 монет</button>
+                </div>
+                <p id="gacha-status" class="mt-3 text-sm text-gray-400" aria-live="polite"></p>
+                <p id="gacha-result" class="mt-3 min-h-6 text-sm text-cyan-200" role="status" aria-live="polite"></p>
+            </div>
+        </dialog>
+
+        <dialog id="cases-modal" aria-labelledby="cases-title" class="w-[calc(100%-2rem)] max-w-xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-gray-600 bg-gray-800 p-0 text-white shadow-2xl backdrop:bg-black/80">
+            <div class="p-6 sm:p-8">
+                <div class="mb-5 flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-sm uppercase tracking-widest text-gray-400">Награда рулетки</p>
+                        <h2 id="cases-title" class="text-2xl font-bold text-emerald-300">Кейсы · <span id="case-count">0</span></h2>
+                    </div>
+                    <button type="button" onclick="closeCasesModal()" aria-label="Закрыть кейсы" class="h-9 w-9 shrink-0 rounded-lg bg-gray-700 text-xl text-gray-300 hover:bg-gray-600">&times;</button>
+                </div>
+                <p class="mb-5 text-sm text-gray-400">В кейсе выпадает карта от эпической до ультралегендарной редкости.</p>
+                <p class="mb-5 text-xs leading-5 text-gray-400">Эпик 82% · Мифик 12% · Легендарка 3% · Секретка 1,25% · Учителя 1% · Ультралегендарная 0,75%</p>
+                <button id="case-open-button-modal" type="button" disabled onclick="openCase()" class="w-full rounded-lg bg-emerald-700 p-3 font-bold transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-gray-600">Открыть кейс</button>
+                <p id="case-result" class="mt-4 min-h-6 text-sm text-emerald-200" role="status" aria-live="polite"></p>
+            </div>
+        </dialog>
+
+        <dialog id="leaderboard-modal" aria-labelledby="leaderboard-title" class="w-[calc(100%-2rem)] max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-gray-600 bg-gray-800 p-0 text-white shadow-2xl backdrop:bg-black/80">
+            <div class="p-6 sm:p-8">
+                <div class="mb-6 flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-sm uppercase tracking-widest text-gray-400">Игроки</p>
+                        <h2 id="leaderboard-title" class="text-2xl font-bold">Топ по балансу</h2>
+                    </div>
+                    <button type="button" onclick="closeLeaderboard()" aria-label="Закрыть топ" class="h-9 w-9 shrink-0 rounded-lg bg-gray-700 text-xl text-gray-300 hover:bg-gray-600">&times;</button>
+                </div>
+                <p id="leaderboard-message" class="mb-4 text-sm text-gray-400" role="status" aria-live="polite">Загружаем рейтинг...</p>
+                <ol id="leaderboard-list" class="space-y-2"></ol>
+            </div>
+        </dialog>
+
+        <dialog id="casino-modal" aria-labelledby="casino-title" class="w-[calc(100%-2rem)] max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-gray-600 bg-gray-800 p-0 text-white shadow-2xl backdrop:bg-black/80">
+            <div class="p-6 sm:p-8">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-sm uppercase tracking-widest text-gray-400">50% на победу</p>
+                        <h2 id="casino-title" class="text-2xl font-bold">Казино</h2>
+                    </div>
+                    <button id="casino-close" type="button" aria-label="Закрыть казино" class="h-9 w-9 shrink-0 rounded-lg bg-gray-700 text-xl text-gray-300 hover:bg-gray-600">&times;</button>
+                </div>
+
+                <div class="flex justify-center py-7">
+                    <div class="relative h-56 w-56" aria-label="Барабан казино">
+                        <div id="casino-wheel" class="absolute inset-0 rounded-full border-4 border-gray-200 shadow-lg">
+                            <span class="casino-sector-label absolute left-1/2 top-[22%] font-bold text-white drop-shadow">ВЫИГРЫШ</span>
+                            <span class="casino-sector-label absolute bottom-[22%] left-1/2 font-bold text-white drop-shadow">ПРОИГРЫШ</span>
+                        </div>
+                        <span class="absolute left-1/2 top-[-7px] z-10 -translate-x-1/2 border-x-[11px] border-t-[18px] border-x-transparent border-t-yellow-300" aria-hidden="true"></span>
+                    </div>
+                </div>
+
+                <p id="casino-result" class="min-h-6 text-center font-semibold text-gray-200" role="status" aria-live="polite">Выбери ставку и крути барабан.</p>
+                <form id="casino-form" class="mt-4 space-y-3">
+                    <div class="flex items-center justify-between gap-3 text-sm text-gray-300">
+                        <label for="casino-bet">Ставка в очках</label>
+                        <span>Баланс: <strong id="casino-balance" class="text-yellow-300">0</strong></span>
+                    </div>
+                    <input id="casino-bet" type="number" min="1" step="1" inputmode="numeric" required placeholder="Введи ставку" class="w-full rounded-lg border border-gray-600 bg-gray-700 p-3 focus:border-yellow-400 focus:outline-none">
+                    <button id="casino-spin" type="submit" class="w-full rounded-lg bg-red-600 p-3 font-bold transition hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-gray-600">Крутить барабан</button>
+                </form>
+            </div>
+        </dialog>
+
+        <dialog id="upgrade-setup-modal" aria-labelledby="upgrader-title" class="w-[calc(100%-2rem)] max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-gray-600 bg-gray-800 p-0 text-white shadow-2xl backdrop:bg-black/80">
+            <div class="p-6 sm:p-8">
+                <div class="mb-5 flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-sm uppercase tracking-widest text-gray-400">Рискни картой</p>
+                        <h2 id="upgrader-title" class="text-2xl font-bold">Апгрейдер</h2>
+                        <p class="mt-1 text-sm text-gray-400">Чем выше редкость сдаваемой карты, тем больше шанс. При неудаче она сгорает.</p>
+                    </div>
+                    <button type="button" onclick="closeUpgradeSetupModal()" aria-label="Закрыть апгрейдер" class="h-9 w-9 shrink-0 rounded-lg bg-gray-700 text-xl text-gray-300 hover:bg-gray-600">&times;</button>
+                </div>
+                <div class="grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_auto_1fr_auto]">
+                    <div>
+                        <label for="upgrade-source" class="mb-1 block text-sm">Твоя карта</label>
+                        <select id="upgrade-source" class="w-full rounded-lg border border-gray-600 bg-gray-700 p-3 focus:border-yellow-400 focus:outline-none"></select>
+                    </div>
+                    <span class="hidden pb-2 text-2xl text-gray-400 md:block" aria-hidden="true">→</span>
+                    <div>
+                        <label for="upgrade-target" class="mb-1 block text-sm">Улучшить до</label>
+                        <select id="upgrade-target" class="w-full rounded-lg border border-gray-600 bg-gray-700 p-3 focus:border-yellow-400 focus:outline-none"></select>
+                    </div>
+                    <button id="upgrade-button" type="button" disabled class="w-full rounded-lg bg-amber-600 p-3 font-bold transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:bg-gray-600 disabled:text-gray-400 md:w-auto">Открыть барабан</button>
+                </div>
+                <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <p id="upgrade-chance" class="font-semibold text-amber-300" aria-live="polite">Загрузка инвентаря...</p>
+                    <p id="upgrade-message" class="text-sm text-gray-300" role="status"></p>
+                </div>
+            </div>
+        </dialog>
+
+        <dialog id="upgrade-modal" aria-labelledby="upgrade-modal-title" class="w-[calc(100%-2rem)] max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-gray-600 bg-gray-800 p-0 text-white shadow-2xl backdrop:bg-black/80">
+            <div class="p-6 sm:p-8">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-sm uppercase tracking-widest text-gray-400">Апгрейдер</p>
+                        <h2 id="upgrade-modal-title" class="text-2xl font-bold">Испытай удачу</h2>
+                        <p id="upgrade-matchup" class="text-sm text-gray-300 mt-1"></p>
+                    </div>
+                    <button id="upgrade-close" type="button" aria-label="Закрыть апгрейдер" class="h-9 w-9 shrink-0 rounded-lg bg-gray-700 text-xl text-gray-300 hover:bg-gray-600">&times;</button>
+                </div>
+
+                <div class="flex justify-center py-7">
+                    <div class="relative h-56 w-56" aria-label="Барабан апгрейдера">
+                        <div id="upgrade-wheel" class="absolute inset-0 rounded-full border-4 border-gray-200 shadow-lg"></div>
+                        <span class="absolute left-1/2 top-[-7px] z-10 -translate-x-1/2 border-x-[11px] border-t-[18px] border-x-transparent border-t-yellow-300" aria-hidden="true"></span>
+                    </div>
+                </div>
+
+                <div class="mb-4 flex justify-center gap-5 text-sm font-semibold">
+                    <span class="text-green-400">● Успех <span id="upgrade-win-percent"></span></span>
+                    <span class="text-red-400">● Неудача <span id="upgrade-lose-percent"></span></span>
+                </div>
+                <p class="mb-3 text-center text-xs text-gray-400">Сектор успеха увеличен для видимости. Шанс указан точно.</p>
+                <p id="upgrade-spin-result" class="min-h-6 text-center text-sm text-gray-200" role="status" aria-live="polite">Сектор успеха показывает твой шанс.</p>
+                <button id="upgrade-spin-button" type="button" class="mt-4 w-full rounded-lg bg-amber-600 p-3 font-bold transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:bg-gray-600">Крутить барабан</button>
+            </div>
+        </dialog>
+
+        <dialog id="card-index-modal" aria-labelledby="card-index-title" class="w-[calc(100%-2rem)] max-w-5xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-gray-600 bg-gray-800 p-0 text-white shadow-2xl backdrop:bg-black/80">
+            <div class="p-6 sm:p-8">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-5">
+                    <div class="flex items-start justify-between gap-4 sm:block">
+                        <div>
+                            <p class="text-sm uppercase tracking-widest text-gray-400">Коллекция</p>
+                            <h2 id="card-index-title" class="text-2xl font-bold">Индекс карточек</h2>
+                            <p id="card-count" class="text-sm text-gray-400 mt-1" aria-live="polite"></p>
+                        </div>
+                        <button id="card-index-close" type="button" onclick="closeCardIndex()" aria-label="Закрыть индекс карточек" class="h-9 w-9 shrink-0 rounded-lg bg-gray-700 text-xl text-gray-300 hover:bg-gray-600 sm:hidden">&times;</button>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:w-2/3">
+                        <label class="sr-only" for="card-search">Поиск по карточкам</label>
+                        <input id="card-search" type="search" placeholder="Имя карточки..." class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 focus:outline-none focus:border-yellow-400">
+                        <label class="sr-only" for="rarity-filter">Фильтр по редкости</label>
+                        <select id="rarity-filter" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 focus:outline-none focus:border-yellow-400">
+                            <option value="all">Все редкости</option>
+                        </select>
+                        <button id="card-index-close-wide" type="button" onclick="closeCardIndex()" class="hidden sm:block rounded-lg border border-gray-600 bg-gray-700 p-3 text-sm font-semibold hover:bg-gray-600">Закрыть</button>
+                    </div>
+                </div>
+                <div id="card-index" class="space-y-8"></div>
+            </div>
+        </dialog>
+
+        <dialog id="market-modal" aria-labelledby="market-title" class="w-[calc(100%-2rem)] max-w-4xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-gray-600 bg-gray-800 p-0 text-white shadow-2xl backdrop:bg-black/80">
+            <div class="p-6 sm:p-8">
+                <div class="mb-5 flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-sm uppercase tracking-widest text-gray-400">Базар</p>
+                        <h2 id="market-title" class="text-2xl font-bold text-amber-300">Торговая площадка</h2>
+                    </div>
+                    <button type="button" onclick="closeMarket()" aria-label="Закрыть базар" class="h-9 w-9 shrink-0 rounded-lg bg-gray-700 text-xl text-gray-300 hover:bg-gray-600">&times;</button>
+                </div>
+
+                <div class="mb-5 grid gap-3 sm:grid-cols-[1fr_120px_120px]">
+                    <select id="market-card-select" class="w-full rounded-lg border border-gray-600 bg-gray-700 p-3 focus:outline-none focus:border-yellow-400"></select>
+                    <input id="market-price" type="number" min="1" step="1" value="100" class="w-full rounded-lg border border-gray-600 bg-gray-700 p-3 focus:outline-none focus:border-yellow-400" placeholder="Цена">
+                    <button id="market-sell-button" type="button" class="rounded-lg bg-amber-600 p-3 font-bold hover:bg-amber-500">Выставить</button>
+                </div>
+                <p id="market-status" class="mb-4 text-sm text-gray-300" role="status" aria-live="polite"></p>
+                <div class="space-y-3" id="market-listings"></div>
+            </div>
+        </dialog>
+    </div>
+
+    <script>
+        const rarities = [
+            { id: 'teachers', name: 'Учителя', colorName: 'Коричневый', color: '#b77942' },
+            { id: 'secret', name: 'Секретки', colorName: 'Черный', color: '#9ca3af' },
+            { id: 'ultra', name: 'Ультралегендарка', colorName: 'Радужный', color: '#e879f9' },
+            { id: 'legendary', name: 'Легендарка', colorName: 'Желтый', color: '#facc15' },
+            { id: 'mythic', name: 'Мифик', colorName: 'Красный', color: '#f87171' },
+            { id: 'epic', name: 'Эпик', colorName: 'Фиолетовый', color: '#c084fc' },
+            { id: 'super-rare', name: 'Сверхредкий', colorName: 'Голубой', color: '#38bdf8' },
+            { id: 'common', name: 'Обычный', colorName: 'Белый', color: '#e5e7eb' }
+        ];
+
+        const cards = [
+            { name: 'Гузель Арматуровна', rarity: 'teachers', price: '800 000' },
+            { name: 'Эльмира Ракидовна', rarity: 'teachers', price: '600 000 / 550 000' },
+            { name: 'Гузель Ахметова', rarity: 'teachers', price: '500 000' },
+            { name: 'Насима Зуфаровна', rarity: 'teachers', price: '470 000' },
+            { name: 'Ирина Валерьевна', rarity: 'teachers', price: '450 000' },
+            { name: 'Валерий Акрамович', rarity: 'teachers', price: '430 000' },
+            { name: 'Михаил Николаевич', rarity: 'teachers', price: '420 000' },
+            { name: 'Ильгиз Винерович', rarity: 'teachers', price: '410 000' },
+            { name: 'Филярия Талгатовна', rarity: 'teachers', price: '400 000' },
+            { name: 'Наталья Николаевна', rarity: 'teachers', price: '390 000' },
+            { name: 'Дилара Галимовна', rarity: 'teachers', price: '380 000' },
+            { name: 'Гульсум Муратовна', rarity: 'teachers', price: '360 000' },
+            { name: 'Эльвира Хасановна', rarity: 'teachers', price: '350 000' },
+            { name: 'Амилия', rarity: 'secret', price: '38 500' },
+            { name: 'Артём', rarity: 'secret', price: '38 500' },
+            { name: 'Даниэль Султангулов', rarity: 'secret', price: '38 500' },
+            { name: 'Саида', rarity: 'secret', price: '38 500' },
+            { name: 'Тимур', rarity: 'secret', price: '38 500' },
+            { name: 'Валерия', rarity: 'ultra', price: '60 000' },
+            { name: 'Рустам', rarity: 'legendary', price: '36 000' },
+            { name: 'Даниэль', rarity: 'legendary', price: '30 000' },
+            { name: 'Миша', rarity: 'legendary', price: '30 000' },
+            { name: 'Константин', rarity: 'legendary', price: '27 000' },
+            { name: 'Мися', rarity: 'legendary', price: '20 000' },
+            { name: 'Егор', rarity: 'mythic', upgradeRarity: 'rare', note: 'Редкий', damage: 36, hp: 560 },
+            { name: 'Тамерлан Гиндуллин', rarity: 'mythic', price: '18 750' },
+            { name: 'Глафира', rarity: 'mythic', price: '18 750' },
+            { name: 'Трофим', rarity: 'mythic', price: '18 750' },
+            { name: 'Данияр Жайлибаев', rarity: 'epic', price: '16 250' },
+            { name: 'Эмин', rarity: 'epic', price: '16 250' },
+            { name: 'Равиль', rarity: 'epic', price: '8 000' },
+            { name: 'Данияр Садыков', rarity: 'epic', price: '7 000' },
+            { name: 'Азат', rarity: 'super-rare', price: '6 000' },
+            { name: 'Маша', rarity: 'super-rare', price: '6 000' },
+            { name: 'Милана', rarity: 'super-rare', price: '5 000' },
+            { name: 'Олег', rarity: 'common', note: 'Простой мужик', damage: 42, hp: 580 },
+            { name: 'Камила', rarity: 'common', price: '500' },
+            { name: 'Карина', rarity: 'common', price: '500' },
+            { name: 'Олег', rarity: 'common', price: '250' }
+        ];
+
+        const catalogCards = [...cards.reduce((catalog, card) => {
+            const existing = catalog.get(card.name);
+            if (!existing) {
+                catalog.set(card.name, { ...card });
+                return catalog;
+            }
+
+            if (!existing.note && card.note) existing.note = card.note;
+            if (existing.damage === undefined) existing.damage = card.damage;
+            if (existing.hp === undefined) existing.hp = card.hp;
+            if (card.price) existing.price = existing.price ? `${existing.price} / ${card.price}` : card.price;
+            return catalog;
+        }, new Map()).values()];
+
+        const rarityRank = {
+            common: 0,
+            rare: 1,
+            'super-rare': 2,
+            epic: 3,
+            mythic: 4,
+            legendary: 5,
+            secret: 6,
+            teachers: 7,
+            ultra: 8
+        };
+        const cardRarityByName = new Map(cards.map((card) => [card.name, card.upgradeRarity || card.rarity]));
+        const cardIndex = document.getElementById('card-index');
+        const cardCount = document.getElementById('card-count');
+        const searchInput = document.getElementById('card-search');
+        const rarityFilter = document.getElementById('rarity-filter');
+        const cardIndexModal = document.getElementById('card-index-modal');
+        const sourceSelect = document.getElementById('upgrade-source');
+        const targetSelect = document.getElementById('upgrade-target');
+        const upgradeButton = document.getElementById('upgrade-button');
+        const upgradeChance = document.getElementById('upgrade-chance');
+        const upgradeMessage = document.getElementById('upgrade-message');
+        const upgradeModal = document.getElementById('upgrade-modal');
+        const upgradeWheel = document.getElementById('upgrade-wheel');
+        const upgradeMatchup = document.getElementById('upgrade-matchup');
+        const upgradeWinPercent = document.getElementById('upgrade-win-percent');
+        const upgradeLosePercent = document.getElementById('upgrade-lose-percent');
+        const upgradeSpinResult = document.getElementById('upgrade-spin-result');
+        const upgradeSpinButton = document.getElementById('upgrade-spin-button');
+        const casinoModal = document.getElementById('casino-modal');
+        const casinoForm = document.getElementById('casino-form');
+        const casinoBet = document.getElementById('casino-bet');
+        const casinoBalance = document.getElementById('casino-balance');
+        const casinoWheel = document.getElementById('casino-wheel');
+        const casinoResult = document.getElementById('casino-result');
+        const casinoSpinButton = document.getElementById('casino-spin');
+        const rouletteButton = document.getElementById('roulette-button');
+        const rouletteStatus = document.getElementById('roulette-status');
+        const rouletteResult = document.getElementById('roulette-result');
+        const gachaOneButton = document.getElementById('gacha-one');
+        const gachaTenButton = document.getElementById('gacha-ten');
+        const gachaResult = document.getElementById('gacha-result');
+        const gachaStatus = document.getElementById('gacha-status');
+        const gachaModal = document.getElementById('gacha-modal');
+        const casesModal = document.getElementById('cases-modal');
+        const upgradeSetupModal = document.getElementById('upgrade-setup-modal');
+        const caseOpenButton = document.getElementById('case-open-button');
+        const caseOpenModalButton = document.getElementById('case-open-button-modal');
+        const caseCountLabel = document.getElementById('case-count');
+        const caseResult = document.getElementById('case-result');
+        const leaderboardModal = document.getElementById('leaderboard-modal');
+        const marketModal = document.getElementById('market-modal');
+        const marketCardSelect = document.getElementById('market-card-select');
+        const marketPriceInput = document.getElementById('market-price');
+        const marketSellButton = document.getElementById('market-sell-button');
+        const marketStatus = document.getElementById('market-status');
+        const marketListingsContainer = document.getElementById('market-listings');
+        let casinoRotation = 0;
+        let casinoSpinning = false;
+        let upgradeRotation = 0;
+        let upgradeSpinning = false;
+        let gachaOpening = false;
+        let caseOpening = false;
+        let gachaAvailable = false;
+        let bonusGachaSpins = 0;
+        let currentBalance = 0;
+        let currentUserId = 0;
+        let currentCaseCount = 0;
+        let ownedCards = [];
+
+        rarities.forEach((rarity) => {
+            const option = document.createElement('option');
+            option.value = rarity.id;
+            option.textContent = `${rarity.colorName} · ${rarity.name}`;
+            rarityFilter.append(option);
+        });
+
+        function renderCardIndex() {
+            const query = searchInput.value.trim().toLocaleLowerCase('ru');
+            const selectedRarity = rarityFilter.value;
+            const ownedCounts = new Map();
+            ownedCards.forEach((cardName) => ownedCounts.set(cardName, (ownedCounts.get(cardName) || 0) + 1));
+            const visibleCards = catalogCards.filter((card) => {
+                const matchesRarity = selectedRarity === 'all' || card.rarity === selectedRarity;
+                const searchableText = `${card.name} ${card.note || ''} ${card.rarity}`.toLocaleLowerCase('ru');
+                return matchesRarity && searchableText.includes(query);
+            });
+
+            cardCount.textContent = `Показано карточек: ${visibleCards.length} из ${catalogCards.length}`;
+            cardIndex.replaceChildren();
+
+            rarities.forEach((rarity) => {
+                const rarityCards = visibleCards.filter((card) => card.rarity === rarity.id);
+                if (rarityCards.length === 0) return;
+
+                const section = document.createElement('section');
+                const heading = document.createElement('h3');
+                heading.className = 'text-lg font-bold mb-3';
+                heading.textContent = `${rarity.colorName} · ${rarity.name}`;
+                heading.style.color = rarity.color;
+
+                const grid = document.createElement('div');
+                grid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3';
+
+                rarityCards.forEach((card) => {
+                    const ownedCount = ownedCounts.get(card.name) || 0;
+                    const item = document.createElement('article');
+                    item.className = 'bg-gray-700 p-4 rounded-lg border border-gray-600';
+                    item.style.borderLeft = `4px solid ${rarity.color}`;
+                    if (ownedCount === 0) {
+                        item.style.opacity = '0.42';
+                        item.style.filter = 'grayscale(1)';
+                    }
+
+                    const titleRow = document.createElement('div');
+                    titleRow.className = 'flex items-start justify-between gap-3';
+
+                    const name = document.createElement('h4');
+                    name.className = 'font-semibold';
+                    name.textContent = card.name;
+                    titleRow.append(name);
+
+                    const ownership = document.createElement('span');
+                    ownership.className = 'shrink-0 text-sm font-bold';
+                    ownership.textContent = ownedCount > 1 ? `×${ownedCount}` : ownedCount === 1 ? 'Есть' : 'Нет';
+                    ownership.classList.add(ownedCount > 0 ? 'text-green-300' : 'text-gray-400');
+                    titleRow.append(ownership);
+                    item.append(titleRow);
+
+                    if (card.note) {
+                        const note = document.createElement('p');
+                        note.className = 'text-sm text-gray-300 mt-1';
+                        note.textContent = card.note;
+                        item.append(note);
+                    }
+
+                    if (card.damage !== undefined || card.hp !== undefined) {
+                        const stats = document.createElement('p');
+                        stats.className = 'text-sm text-gray-300 mt-2';
+                        stats.textContent = `Урон: ${card.damage ?? '—'} · HP: ${card.hp ?? '—'}`;
+                        item.append(stats);
+                    }
+
+                    if (card.price) {
+                        const price = document.createElement('p');
+                        price.className = 'text-sm text-yellow-300 mt-2';
+                        price.textContent = `${card.price} очков`;
+                        item.append(price);
+                    }
+
+                    grid.append(item);
+                });
+
+                section.append(heading, grid);
+                cardIndex.append(section);
+            });
+
+            if (visibleCards.length === 0) {
+                const emptyState = document.createElement('p');
+                emptyState.className = 'text-gray-400 py-8 text-center';
+                emptyState.textContent = 'Карточки не найдены';
+                cardIndex.append(emptyState);
+            }
+        }
+
+        searchInput.addEventListener('input', renderCardIndex);
+        rarityFilter.addEventListener('change', renderCardIndex);
+        function openCardIndex() {
+            cardIndexModal.showModal();
+        }
+
+        function closeCardIndex() {
+            cardIndexModal.close();
+        }
+
+        function updateUpgradeChance() {
+            const sourceName = sourceSelect.value;
+            const targetName = targetSelect.value;
+            const sourceRarity = cardRarityByName.get(sourceName);
+            const targetRarity = cardRarityByName.get(targetName);
+
+            if (!sourceName || !targetName || !sourceRarity || !targetRarity) {
+                upgradeChance.textContent = 'Выбери свою карту и цель';
+                upgradeButton.disabled = true;
+                return;
+            }
+
+            const sourceRank = rarityRank[sourceRarity];
+            const targetRank = rarityRank[targetRarity];
+            if (targetRank <= sourceRank) {
+                upgradeChance.textContent = 'Цель должна быть выше по редкости';
+                upgradeButton.disabled = true;
+                return;
+            }
+
+            const chance = Math.min(90, 0.2 * (2 ** (sourceRank + 8 - targetRank)));
+            upgradeChance.textContent = `Шанс успеха: ${chance.toLocaleString('ru-RU')}%`;
+            setUpgradeWheelChance(chance);
+            upgradeMatchup.textContent = `${sourceName} → ${targetName}`;
+            upgradeButton.disabled = false;
+        }
+
+        function setUpgradeWheelChance(chance) {
+            const winAngle = Math.max(8, chance * 3.6);
+            const startAngle = (360 - winAngle / 2 + 360) % 360;
+            upgradeWheel.style.background = `conic-gradient(from ${startAngle}deg, #16a34a 0deg ${winAngle}deg, #dc2626 ${winAngle}deg 360deg)`;
+            upgradeWinPercent.textContent = `${chance.toLocaleString('ru-RU')}%`;
+            upgradeLosePercent.textContent = `${(100 - chance).toLocaleString('ru-RU')}%`;
+        }
+
+        function renderUpgradeOptions() {
+            const selectedSource = sourceSelect.value;
+            const sourceCounts = new Map();
+            ownedCards.forEach((cardName) => sourceCounts.set(cardName, (sourceCounts.get(cardName) || 0) + 1));
+            sourceSelect.replaceChildren();
+
+            if (sourceCounts.size === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'Нет карт в инвентаре';
+                sourceSelect.append(option);
+            } else {
+                sourceCounts.forEach((count, cardName) => {
+                    const option = document.createElement('option');
+                    option.value = cardName;
+                    option.textContent = count > 1 ? `${cardName} ×${count}` : cardName;
+                    sourceSelect.append(option);
+                });
+                if (sourceCounts.has(selectedSource)) sourceSelect.value = selectedSource;
+            }
+
+            renderUpgradeTargets();
+        }
+
+        function renderUpgradeTargets() {
+            const sourceRarity = cardRarityByName.get(sourceSelect.value);
+            const sourceRank = rarityRank[sourceRarity];
+            const previousTarget = targetSelect.value;
+            const eligibleTargets = [...new Map(cards
+                .filter((card) => rarityRank[cardRarityByName.get(card.name)] > sourceRank)
+                .map((card) => [card.name, card])).values()];
+
+            targetSelect.replaceChildren();
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = eligibleTargets.length ? 'Выбери карту' : 'Нет карт выше по редкости';
+            targetSelect.append(placeholder);
+
+            eligibleTargets.forEach((card) => {
+                const rarity = rarities.find((item) => item.id === card.rarity);
+                const option = document.createElement('option');
+                option.value = card.name;
+                option.textContent = `${card.name} · ${card.upgradeRarity ? 'Редкий' : rarity.name}`;
+                targetSelect.append(option);
+            });
+
+            if (eligibleTargets.some((card) => card.name === previousTarget)) targetSelect.value = previousTarget;
+            updateUpgradeChance();
+        }
+
+        function openUpgradeSetupModal() {
+            upgradeSetupModal.showModal();
+        }
+
+        function closeUpgradeSetupModal() {
+            upgradeSetupModal.close();
+        }
+
+        function openUpgradeModal() {
+            if (upgradeButton.disabled || upgradeSpinning) return;
+            upgradeSpinResult.textContent = 'Сектор успеха показывает твой шанс.';
+            upgradeSetupModal.close();
+            upgradeModal.showModal();
+        }
+
+        async function upgradeCard() {
+            if (upgradeSpinning) return;
+
+            upgradeSpinning = true;
+            upgradeSpinButton.disabled = true;
+            upgradeButton.disabled = true;
+            upgradeSpinResult.textContent = 'Барабан крутится...';
+
+            try {
+                const res = await fetch('/api/upgrade', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sourceCard: sourceSelect.value, targetCard: targetSelect.value })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    upgradeSpinResult.textContent = data.message || 'Не удалось улучшить карту.';
+                    return;
+                }
+
+                setUpgradeWheelChance(data.chance);
+                const alignment = data.success ? 0 : 180;
+                upgradeRotation += 5 * 360 + (alignment - (upgradeRotation % 360) + 360) % 360;
+                upgradeWheel.style.transform = `rotate(${upgradeRotation}deg)`;
+                await new Promise((resolve) => setTimeout(resolve, 4100));
+
+                upgradeSpinResult.textContent = `${data.message} Шанс был ${data.chance.toLocaleString('ru-RU')}%.`;
+                upgradeMessage.textContent = upgradeSpinResult.textContent;
+                ownedCards = data.inventory;
+                renderUpgradeOptions();
+                await loadData();
+            } catch {
+                upgradeSpinResult.textContent = 'Не удалось связаться с сервером.';
+            } finally {
+                upgradeSpinning = false;
+                upgradeSpinButton.disabled = false;
+                updateUpgradeChance();
+            }
+        }
+
+        sourceSelect.addEventListener('change', renderUpgradeTargets);
+        targetSelect.addEventListener('change', updateUpgradeChance);
+        upgradeButton.addEventListener('click', openUpgradeModal);
+        upgradeSpinButton.addEventListener('click', upgradeCard);
+        document.getElementById('upgrade-close').addEventListener('click', () => upgradeModal.close());
+        upgradeModal.addEventListener('cancel', (event) => {
+            if (upgradeSpinning) event.preventDefault();
+        });
+
+        async function loadData() {
+            const res = await fetch('/api/me');
+            if (res.status === 401) {
+                window.location.href = '/login.html';
+                return;
+            }
+            const user = await res.json();
+            currentBalance = user.balance;
+            currentUserId = Number(user.id || 0);
+            bonusGachaSpins = user.gacha.bonusSpins || 0;
+            gachaAvailable = user.gacha.dailyAvailable || bonusGachaSpins > 0;
+            document.getElementById('user-nickname').innerText = user.username;
+            document.getElementById('user-balance').innerText = user.balance.toLocaleString('ru-RU');
+            const experience = Number.isSafeInteger(user.experience) ? user.experience : 0;
+            const levelProgress = calculateLevelProgress(experience);
+            document.getElementById('user-level').textContent = `Уровень ${levelProgress.level}`;
+            document.getElementById('user-xp-total').textContent = `${experience.toLocaleString('ru-RU')} XP`;
+            const xpRemaining = levelProgress.xpForNextLevel - levelProgress.xpIntoLevel;
+            document.getElementById('user-xp').textContent = `${xpRemaining} XP`;
+            document.getElementById('user-xp-progress').style.width = `${levelProgress.progressPercent}%`;
+            document.getElementById('user-xp-percent').textContent = `${Math.floor(levelProgress.progressPercent)}%`;
+            document.querySelector('[aria-label="Прогресс опыта"]').setAttribute('aria-valuenow', Math.floor(levelProgress.progressPercent));
+            casinoBalance.textContent = user.balance.toLocaleString('ru-RU');
+            casinoBet.max = user.balance;
+            updateGachaButtons();
+            gachaStatus.textContent = user.gacha.dailyAvailable
+                ? `Бесплатный запуск доступен сегодня. Бонусных запусков: ${bonusGachaSpins}.`
+                : bonusGachaSpins > 0
+                    ? `Дневной запуск использован. Доступно бонусных запусков: ${bonusGachaSpins}.`
+                    : 'Дневной запуск использован. Следующий будет доступен завтра.';
+            currentCaseCount = user.caseCount || 0;
+            caseCountLabel.textContent = currentCaseCount;
+            document.getElementById('case-open-label').textContent = `Кейсы · ${currentCaseCount}`;
+            caseOpenModalButton.disabled = caseOpening || currentCaseCount < 1;
+            document.getElementById('user-card').innerText = user.card;
+            rouletteButton.disabled = !user.roulette.dailyAvailable && user.roulette.bonusSpins === 0;
+            document.getElementById('roulette-button-label').textContent = user.roulette.dailyAvailable
+                ? 'Рулетка · сегодня'
+                : `Рулетка ×${user.roulette.bonusSpins}`;
+            rouletteStatus.textContent = user.roulette.dailyAvailable
+                ? `Бесплатная попытка доступна сегодня. Бонусных прокрутов: ${user.roulette.bonusSpins}. Шанс кейса в рулетке: 10%.`
+                : user.roulette.bonusSpins > 0
+                    ? `Бесплатная попытка использована. Бонусных прокрутов: ${user.roulette.bonusSpins}. Шанс кейса: 10%.`
+                    : 'Бесплатная попытка уже использована сегодня. Шанс кейса: 10%.';
+            ownedCards = Array.isArray(user.inventory) ? user.inventory : [];
+            renderUpgradeOptions();
+            renderCardIndex();
+
+            if (user.role === 'admin') {
+                document.getElementById('admin-link').classList.remove('hidden');
+            }
+        }
+
+        function calculateLevelProgress(experience) {
+            const level = Math.floor(experience / 100);
+            const xpIntoLevel = experience % 100;
+            const xpForNextLevel = 100;
+
+            return {
+                level,
+                xpIntoLevel,
+                xpForNextLevel,
+                progressPercent: (xpIntoLevel / xpForNextLevel) * 100,
+                xpRemaining: Math.max(0, xpForNextLevel - xpIntoLevel)
+            };
+        }
+
+        function renderMarketListings(listings) {
+            if (!marketListingsContainer) return;
+            marketListingsContainer.replaceChildren();
+
+            if (!Array.isArray(listings) || listings.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'rounded-xl border border-dashed border-gray-600 bg-gray-900/40 p-4 text-sm text-gray-400';
+                empty.textContent = 'На базаре пока пусто. Выставьте свою первую карту.';
+                marketListingsContainer.append(empty);
+                return;
+            }
+
+            listings.forEach((listing) => {
+                const card = document.createElement('article');
+                card.className = 'rounded-2xl border border-amber-700/40 bg-gray-900/40 p-4';
+
+                const header = document.createElement('div');
+                header.className = 'mb-3 flex items-start justify-between gap-3';
+
+                const titleWrap = document.createElement('div');
+                const title = document.createElement('h3');
+                title.className = 'font-bold text-amber-200';
+                title.textContent = listing.cardName;
+                const seller = document.createElement('p');
+                seller.className = 'text-xs text-gray-400';
+                seller.textContent = `Продавец: ${listing.sellerUsername}`;
+                titleWrap.append(title, seller);
+
+                const price = document.createElement('div');
+                price.className = 'rounded-lg bg-amber-500/10 px-2 py-1 text-right';
+                const priceValue = document.createElement('div');
+                priceValue.className = 'font-bold text-amber-300';
+                priceValue.textContent = `${Number(listing.price).toLocaleString('ru-RU')} ₽`;
+                const marketIndex = document.createElement('div');
+                marketIndex.className = 'text-[10px] text-gray-400';
+                marketIndex.textContent = `Индекс: ${Number(listing.marketPrice || listing.price).toLocaleString('ru-RU')} ₽`;
+                price.append(priceValue, marketIndex);
+                header.append(titleWrap, price);
+
+                const actions = document.createElement('div');
+                actions.className = 'flex flex-wrap items-center justify-between gap-2';
+
+                const buyButton = document.createElement('button');
+                buyButton.type = 'button';
+                buyButton.className = 'rounded-lg bg-amber-600 px-3 py-2 text-sm font-bold hover:bg-amber-500';
+                buyButton.textContent = 'Купить';
+                buyButton.addEventListener('click', () => buyMarketListing(listing.id));
+
+                const removeButton = document.createElement('button');
+                removeButton.type = 'button';
+                removeButton.className = 'rounded-lg border border-red-500/50 bg-red-500/10 px-3 py-2 text-sm hover:bg-red-500/20';
+                removeButton.textContent = 'Удалить';
+                removeButton.addEventListener('click', () => removeMarketListing(listing.id));
+
+                if (listing.isOwner) {
+                    actions.append(removeButton);
+                } else {
+                    actions.append(buyButton);
+                }
+
+                card.append(header, actions);
+                marketListingsContainer.append(card);
+            });
+        }
+
+        function openMarket() {
+            marketStatus.textContent = 'Загружаем базар...';
+            marketModal.showModal();
+            loadMarketListings();
+        }
+
+        function closeMarket() {
+            marketModal.close();
+        }
+
+        async function loadMarketListings() {
+            try {
+                const response = await fetch('/api/market/listings');
+                const data = await response.json();
+                if (!response.ok) {
+                    marketStatus.textContent = data.message || 'Не удалось загрузить базар.';
+                    return;
+                }
+
+                const listings = (data.listings || []).map((listing) => ({
+                    ...listing,
+                    isOwner: Number(listing.sellerId) === Number(currentUserId || 0)
+                }));
+
+                marketStatus.textContent = `Лотов: ${listings.length}`;
+                renderMarketListings(listings);
+
+                const ownedCardsList = Array.isArray(data.myCards) ? data.myCards : [];
+                marketCardSelect.replaceChildren();
+                if (!ownedCardsList.length) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'У тебя нет карт для продажи';
+                    marketCardSelect.append(option);
+                    marketSellButton.disabled = true;
+                    marketPriceInput.disabled = true;
+                    return;
+                }
+
+                ownedCardsList.forEach((cardName) => {
+                    const option = document.createElement('option');
+                    option.value = cardName;
+                    option.textContent = cardName;
+                    marketCardSelect.append(option);
+                });
+                marketSellButton.disabled = false;
+                marketPriceInput.disabled = false;
+            } catch {
+                marketStatus.textContent = 'Не удалось загрузить базар.';
+            }
+        }
+
+        async function sellMarketCard() {
+            const cardName = marketCardSelect.value;
+            const price = Number(marketPriceInput.value);
+            if (!cardName) {
+                marketStatus.textContent = 'Сначала выбери карту для продажи.';
+                return;
+            }
+            if (!Number.isSafeInteger(price) || price <= 0) {
+                marketStatus.textContent = 'Цена должна быть положительным целым числом.';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/market/sell', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        cardName,
+                        price,
+                        marketPrice: price
+                    })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    marketStatus.textContent = data.message || 'Не удалось выставить карту.';
+                    return;
+                }
+
+                marketStatus.textContent = data.message || 'Карта выставлена на базар.';
+                marketPriceInput.value = '100';
+                await loadData();
+                await loadMarketListings();
+            } catch {
+                marketStatus.textContent = 'Не удалось связаться с сервером.';
+            }
+        }
+
+        async function buyMarketListing(listingId) {
+            try {
+                const response = await fetch(`/api/market/buy/${listingId}`, { method: 'POST' });
+                const data = await response.json();
+                if (!response.ok) {
+                    marketStatus.textContent = data.message || 'Не удалось купить карту.';
+                    return;
+                }
+
+                marketStatus.textContent = data.message || 'Карточка куплена.';
+                await loadData();
+                await loadMarketListings();
+            } catch {
+                marketStatus.textContent = 'Не удалось связаться с сервером.';
+            }
+        }
+
+        async function removeMarketListing(listingId) {
+            try {
+                const response = await fetch(`/api/market/listings/${listingId}`, { method: 'DELETE' });
+                const data = await response.json();
+                if (!response.ok) {
+                    marketStatus.textContent = data.message || 'Не удалось удалить лот.';
+                    return;
+                }
+
+                marketStatus.textContent = data.message || 'Лот удалён.';
+                await loadData();
+                await loadMarketListings();
+            } catch {
+                marketStatus.textContent = 'Не удалось связаться с сервером.';
+            }
+        }
+
+        marketSellButton.addEventListener('click', sellMarketCard);
+
+        function updateGachaButtons() {
+            gachaOneButton.disabled = gachaOpening || !gachaAvailable || currentBalance < 100;
+            gachaTenButton.disabled = gachaOpening || !gachaAvailable || currentBalance < 1000;
+        }
+
+        function openGachaModal() {
+            gachaModal.showModal();
+        }
+
+        function closeGachaModal() {
+            gachaModal.close();
+        }
+
+        async function openGacha(count) {
+            if (gachaOpening) return;
+            gachaOpening = true;
+            updateGachaButtons();
+            gachaResult.textContent = `Открываем ${count === 1 ? 'карту' : '10 карт'}...`;
+
+            try {
+                const response = await fetch('/api/gacha', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ count })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    gachaResult.textContent = data.message || 'Не удалось открыть карты.';
+                    return;
+                }
+
+                gachaResult.textContent = `${data.draws.map((draw) => `${draw.name} · ${draw.rarityLabel}`).join(' | ')}. Списано ${data.cost} монет. +100 XP`;
+                await loadData();
+            } catch {
+                gachaResult.textContent = 'Не удалось связаться с сервером.';
+            } finally {
+                gachaOpening = false;
+                updateGachaButtons();
+            }
+        }
+
+        async function openLeaderboard(type) {
+            leaderboardModal.showModal();
+            const isLevelLeaderboard = type === 'level';
+            document.getElementById('leaderboard-title').textContent = isLevelLeaderboard ? 'Топ по уровням' : 'Топ по балансу';
+            const message = document.getElementById('leaderboard-message');
+            const list = document.getElementById('leaderboard-list');
+            message.textContent = 'Загружаем топ...';
+            list.replaceChildren();
+
+            try {
+                const response = await fetch(isLevelLeaderboard ? '/api/leaderboard/levels' : '/api/leaderboard');
+                const data = await response.json();
+                if (!response.ok) {
+                    message.textContent = data.message || 'Не удалось загрузить топ.';
+                    return;
+                }
+
+                data.entries.forEach((entry) => {
+                    const row = document.createElement('li');
+                    row.className = `flex items-center gap-3 rounded-lg border p-3 ${entry.isCurrentUser ? 'border-yellow-500 bg-yellow-500/10' : 'border-gray-700 bg-gray-700/60'}`;
+
+                    const rank = document.createElement('span');
+                    rank.className = 'w-8 shrink-0 text-sm font-bold text-gray-400';
+                    rank.textContent = `#${entry.rank}`;
+
+                    const username = document.createElement('span');
+                    username.className = 'min-w-0 flex-1 truncate font-semibold';
+                    username.textContent = entry.username;
+
+                    const score = document.createElement('span');
+                    score.className = `shrink-0 font-bold ${isLevelLeaderboard ? 'text-cyan-300' : 'text-yellow-300'}`;
+                    score.textContent = isLevelLeaderboard
+                        ? `Уровень ${entry.level} · ${entry.experience.toLocaleString('ru-RU')} XP`
+                        : `${entry.balance.toLocaleString('ru-RU')} монет`;
+
+                    row.append(rank, username, score);
+                    list.append(row);
+                });
+
+                message.textContent = data.currentRank <= 10
+                    ? `Твоё место: #${data.currentRank}`
+                    : `Твоё место: #${data.currentRank}. Показан топ-10.`;
+            } catch {
+                message.textContent = 'Не удалось связаться с сервером.';
+            }
+        }
+
+        function closeLeaderboard() {
+            leaderboardModal.close();
+        }
+
+        async function logout() {
+            rouletteResult.textContent = 'Сохраняем игру...';
+            try {
+                const response = await fetch('/api/logout', { method: 'POST' });
+                const data = await response.json();
+                if (!response.ok) {
+                    rouletteResult.textContent = data.message || 'Не удалось сохранить игру.';
+                    return;
+                }
+                window.location.href = '/login.html';
+            } catch {
+                rouletteResult.textContent = 'Не удалось связаться с сервером. Игра пока не завершена.';
+            }
+        }
+
+        function openCasesModal() {
+            caseResult.textContent = '';
+            casesModal.showModal();
+        }
+
+        function closeCasesModal() {
+            casesModal.close();
+        }
+
+        async function openCase() {
+            if (caseOpening || caseOpenModalButton.disabled) return;
+            caseOpening = true;
+            caseOpenModalButton.disabled = true;
+            caseResult.textContent = 'Открываем кейс...';
+
+            try {
+                const response = await fetch('/api/cases/open', { method: 'POST' });
+                const data = await response.json();
+                if (!response.ok) {
+                    caseResult.textContent = data.message || 'Не удалось открыть кейс.';
+                    return;
+                }
+
+                caseResult.textContent = `${data.message} +100 XP`;
+                ownedCards = data.inventory;
+                await loadData();
+            } catch {
+                caseResult.textContent = 'Не удалось связаться с сервером.';
+            } finally {
+                caseOpening = false;
+                caseOpenModalButton.disabled = currentCaseCount < 1;
+            }
+        }
+
+        function openCasino() {
+            casinoResult.textContent = 'Выбери ставку и крути барабан.';
+            casinoBet.value = '';
+            casinoModal.showModal();
+            casinoBet.focus();
+        }
+
+        async function playCasino(event) {
+            event.preventDefault();
+            if (casinoSpinning) return;
+
+            const bet = Number(casinoBet.value);
+            if (!Number.isSafeInteger(bet) || bet <= 0) {
+                casinoResult.textContent = 'Введи целую ставку больше нуля.';
+                return;
+            }
+
+            casinoSpinning = true;
+            casinoSpinButton.disabled = true;
+            casinoBet.disabled = true;
+            casinoResult.textContent = 'Барабан крутится...';
+
+            try {
+                const res = await fetch('/api/casino', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ bet })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    casinoResult.textContent = data.message || 'Не удалось сделать ставку.';
+                    return;
+                }
+
+                const landingAngle = data.win ? 0 : 180;
+                const alignment = (landingAngle - (casinoRotation % 360) + 360) % 360;
+                casinoRotation += 5 * 360 + alignment;
+                casinoWheel.style.setProperty('--casino-label-counter-rotation', `${-casinoRotation}deg`);
+                casinoWheel.style.transform = `rotate(${casinoRotation}deg)`;
+                await new Promise((resolve) => setTimeout(resolve, 4100));
+
+                casinoResult.textContent = data.message;
+                document.getElementById('user-balance').innerText = data.balance.toLocaleString('ru-RU');
+                casinoBalance.textContent = data.balance.toLocaleString('ru-RU');
+                casinoBet.max = data.balance;
+                if (Number(casinoBet.value) > data.balance) casinoBet.value = data.balance || '';
+            } catch {
+                casinoResult.textContent = 'Не удалось связаться с сервером.';
+            } finally {
+                casinoSpinning = false;
+                casinoSpinButton.disabled = false;
+                casinoBet.disabled = false;
+            }
+        }
+
+        casinoForm.addEventListener('submit', playCasino);
+        document.getElementById('casino-close').addEventListener('click', () => casinoModal.close());
+        casinoModal.addEventListener('cancel', (event) => {
+            if (casinoSpinning) event.preventDefault();
+        });
+
+        async function spinRoulette() {
+            if (rouletteButton.disabled) return;
+            rouletteButton.disabled = true;
+            rouletteResult.textContent = 'Рулетка крутится...';
+
+            try {
+                const res = await fetch('/api/roulette', { method: 'POST' });
+                const data = await res.json();
+                rouletteResult.textContent = data.success ? `${data.message} +100 XP` : data.message || 'Не удалось прокрутить рулетку.';
+                await loadData();
+            } catch {
+                rouletteResult.textContent = 'Не удалось связаться с сервером.';
+                rouletteButton.disabled = false;
+            }
+        }
+
+        renderCardIndex();
+        loadData();
+    </script>
+</body>
+</html>
